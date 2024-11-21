@@ -1,94 +1,89 @@
-import { useRef, useState } from 'react';
-import { useStore } from './useStore';
-import { compressImage } from '../utils/imageProcessing';
-import { FlyerDimensions } from '../types';
+import { useState } from 'react'
+import { useImageStore } from './useStore'
 
 export const useImageProcessing = () => {
-  const [flyerBase, setFlyerBase] = useState<HTMLImageElement | null>(null);
-  const [userImage, setUserImage] = useState<HTMLImageElement | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [progress, setProgress] = useState(0);
-  const cropperRef = useRef<HTMLImageElement>(null);
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  
+  const { 
+    setOriginalImage, 
+    setCroppedImage, 
+    setFlyerImage 
+  } = useImageStore()
 
-  const { showMessage } = useStore();
-
-  const handleImageUpload = async (file: File) => {
-    setIsLoading(true);
-    setProgress(0);
-
-    try {
-      const compressedFile = await compressImage(file);
-      const imageUrl = URL.createObjectURL(compressedFile);
-      setUserImage(await loadImage(imageUrl));
-      setIsLoading(false);
-      setProgress(100);
-      showMessage('Image chargée avec succès', 'success');
-    } catch (error) {
-      console.error('Erreur lors du chargement de l\'image:', error);
-      showMessage('Erreur lors du chargement de l\'image', 'error');
-      setIsLoading(false);
-    }
-  };
-
-  const handleCropImage = async () => {
-    setIsLoading(true);
-    setProgress(0);
+  const processImage = async (file: File) => {
+    setIsLoading(true)
+    setError(null)
 
     try {
-      const croppedImage = await cropImage(cropperRef.current!, {
-        width: FlyerDimensions.imageZone.width,
-        height: FlyerDimensions.imageZone.height,
-      });
-      setUserImage(croppedImage);
-      setIsLoading(false);
-      setProgress(100);
-      showMessage('Image recadrée avec succès', 'success');
-    } catch (error) {
-      console.error('Erreur lors du recadrage de l\'image:', error);
-      showMessage('Erreur lors du recadrage de l\'image', 'error');
-      setIsLoading(false);
-    }
-  };
-
-  const handleDownload = async () => {
-    setIsLoading(true);
-    setProgress(0);
-
-    try {
-      const blob = await generateFlyerImage(flyerBase!, userImage!);
-      const url = URL.createObjectURL(blob);
-      const filename = `flyer_${new Date().toISOString().slice(0, 10)}.jpg`;
-
-      if (isIOS) {
-        window.location.href = url;
-      } else {
-        const link = document.createElement('a');
-        link.download = filename;
-        link.href = url;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+      // Validation du fichier
+      const validTypes = ['image/jpeg', 'image/png', 'image/webp']
+      if (!validTypes.includes(file.type)) {
+        throw new Error('Format non supporté. Utilisez JPG, PNG ou WebP')
       }
 
-      URL.revokeObjectURL(url);
-      setIsLoading(false);
-      setProgress(100);
-      showMessage('Flyer téléchargé avec succès', 'success');
-    } catch (error) {
-      console.error('Erreur lors du téléchargement:', error);
-      showMessage('Erreur lors du téléchargement', 'error');
-      setIsLoading(false);
+      // Compression de l'image
+      const compressedImage = await compressImage(file)
+      
+      setOriginalImage(compressedImage)
+      setIsLoading(false)
+      return compressedImage
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erreur de traitement')
+      setIsLoading(false)
+      return null
     }
-  };
+  }
 
-  return {
-    flyerBase,
-    userImage,
-    cropperRef,
-    isLoading,
-    progress,
-    handleImageUpload,
-    handleCropImage,
-    handleDownload,
-  };
-};
+  const compressImage = (file: File): Promise<File> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        const img = new Image()
+        img.onload = () => {
+          const canvas = document.createElement('canvas')
+          let width = img.width
+          let height = img.height
+
+          const MAX_SIZE = 2048
+          if (width > MAX_SIZE || height > MAX_SIZE) {
+            if (width > height) {
+              height = (height / width) * MAX_SIZE
+              width = MAX_SIZE
+            } else {
+              width = (width / height) * MAX_SIZE
+              height = MAX_SIZE
+            }
+          }
+
+          canvas.width = width
+          canvas.height = height
+          const ctx = canvas.getContext('2d')!
+          ctx.drawImage(img, 0, 0, width, height)
+
+          canvas.toBlob(
+            (blob) => {
+              if (!blob) {
+                reject(new Error('Compression échouée'))
+                return
+              }
+              const compressedFile = new File([blob], file.name, {
+                type: 'image/jpeg',
+                lastModified: Date.now()
+              })
+              resolve(compressedFile)
+            },
+            'image/jpeg',
+            0.85
+          )
+        }
+        img.onerror = reject
+        img.src = e.target.result as string
+      }
+      reader.onerror = reject
+      reader.readAsDataURL(file)
+    })
+  }
+
+  return { processImage, isLoading, error }
+}

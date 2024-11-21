@@ -1,35 +1,66 @@
-import { useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { useStore } from '../hooks/useStore';
+'use client'
 
-export const Message: React.FC = () => {
-  const { message, type, clearMessage } = useStore();
+import { useEffect } from 'react'
+import { CheckCircle2, XCircle, X } from 'lucide-react'
 
+interface MessageProps {
+  text: string
+  type?: 'success' | 'error'
+  onClose?: () => void
+  duration?: number
+}
+
+export default function Message({ 
+  text, 
+  type = 'success', 
+  onClose, 
+  duration = 3000 
+}: MessageProps) {
   useEffect(() => {
-    let timer: ReturnType<typeof setTimeout> | null = null;
-    if (message) {
-      timer = setTimeout(clearMessage, 3000);
-    }
-    return () => {
-      if (timer) {
-        clearTimeout(timer);
-      }
-    };
-  }, [message, clearMessage]);
+    const timer = setTimeout(() => {
+      onClose?.()
+    }, duration)
+
+    return () => clearTimeout(timer)
+  }, [duration, onClose])
+
+  const icons = {
+    success: <CheckCircle2 className="text-green-500" />,
+    error: <XCircle className="text-red-500" />
+  }
+
+  const backgrounds = {
+    success: 'bg-green-50 border-green-200',
+    error: 'bg-red-50 border-red-200'
+  }
+
+  const textColors = {
+    success: 'text-green-800',
+    error: 'text-red-800'
+  }
 
   return (
-    <AnimatePresence>
-      {message && (
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -20 }}
-          transition={{ duration: 0.3 }}
-          className={`fixed top-4 left-1/2 transform -translate-x-1/2 bg-${type}-500 text-white px-6 py-3 rounded-lg shadow-md`}
+    <div 
+      className={`
+        fixed top-4 left-1/2 -translate-x-1/2 z-50 
+        flex items-center space-x-3 
+        px-4 py-3 rounded-lg 
+        border shadow-md
+        ${backgrounds[type]}
+        ${textColors[type]}
+        animate-fadeIn
+      `}
+    >
+      {icons[type]}
+      <span>{text}</span>
+      {onClose && (
+        <button 
+          onClick={onClose} 
+          className="ml-4 hover:bg-gray-100 rounded-full p-1"
         >
-          {message}
-        </motion.div>
+          <X size={16} />
+        </button>
       )}
-    </AnimatePresence>
-  );
-};
+    </div>
+  )
+}
