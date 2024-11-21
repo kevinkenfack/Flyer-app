@@ -1,7 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   images: {
-    domains: ['localhost'],
+    domains: ['https://print-flyer19.vercel.app'],
   },
   typescript: {
     ignoreBuildErrors: false
