@@ -17,7 +17,7 @@
     "react-dom": "^18.2.0",
     "zustand": "^4.4.6",
     "lucide-react": "^0.460.0", 
-    "@geist-ui/react": "^2.3.1"
+    "@geist-ui/react": "^2.2.5"
   },
   "devDependencies": {
     "@types/node": "^20.9.0", 
