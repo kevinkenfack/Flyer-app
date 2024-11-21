@@ -144,9 +144,10 @@ export default function ImageUploader() {
 
   const loadImage = (src: string): Promise<HTMLImageElement> => {
     return new Promise((resolve, reject) => {
-      const img = new Image()
+      // Utilisez document.createElement('img') au lieu de new Image()
+      const img = document.createElement('img')
       img.onload = () => resolve(img)
-      img.onerror = reject
+      img.onerror = (error) => reject(error)
       img.crossOrigin = 'Anonymous'
       img.src = src
     })
@@ -218,7 +219,7 @@ export default function ImageUploader() {
 
       {originalImage && (
         <div className="image-preview space-y-4">
-          <image 
+          <img 
             ref={cropperImageRef} 
             alt="Image à recadrer" 
             className="max-w-full hidden" 
