@@ -7,6 +7,7 @@ import Cropper from 'cropperjs'
 import 'cropperjs/dist/cropper.min.css'
 import LoadingOverlay from './LoadingOverlay'
 import Message from './Message'
+import Image from 'next/image'
 import { Camera, Upload, Scissors, Download } from 'lucide-react'
 
 export default function ImageUploader() {
@@ -217,7 +218,7 @@ export default function ImageUploader() {
 
       {originalImage && (
         <div className="image-preview space-y-4">
-          <img 
+          <image 
             ref={cropperImageRef} 
             alt="Image à recadrer" 
             className="max-w-full hidden" 
